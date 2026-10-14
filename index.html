@@ -5,27 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OIC Insurer Index</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip" href="#app" data-t="skip"></a>
+<div class="utilbar">
+  <div class="util-in">
+    <span class="util-note" data-t="util_note"></span>
+    <div class="util-tools">
+      <span class="util-label" data-t="text_size"></span>
+      <div class="sizer" role="group" id="sizer">
+        <button type="button" data-size="s" aria-label="Smaller text">ก-</button>
+        <button type="button" data-size="m" aria-label="Normal text">ก</button>
+        <button type="button" data-size="l" aria-label="Larger text">ก+</button>
+      </div>
+      <span class="util-label" data-t="contrast"></span>
+      <div class="sizer" role="group" id="themer">
+        <button type="button" data-theme-set="light" aria-label="Light">☀</button>
+        <button type="button" data-theme-set="dark" aria-label="Dark">☾</button>
+      </div>
+      <button class="lang" id="lang" type="button" aria-label="Switch language">EN</button>
+    </div>
+  </div>
+</div>
 <header class="topbar">
   <div class="topbar-in">
-    <a class="logo" href="#/"><span class="logo-mark">★</span><span data-t="brand"></span></a>
-    <nav class="nav" id="nav">
-      <a href="#/" data-route="" data-t="nav_rank"></a>
-      <a href="#/products" data-route="products" data-t="nav_products"></a>
-      <a href="#/review" data-route="review" data-t="nav_review"></a>
-      <a href="#/wallet" data-route="wallet"><span data-t="nav_wallet"></span> <span class="pill gold" id="nav-balance">0</span></a>
-      <a href="#/portal" data-route="portal" data-t="nav_portal"></a>
-      <a href="#/oic" data-route="oic" data-t="nav_oic"></a>
-      <a href="#/method" data-route="method" data-t="nav_method"></a>
+    <a class="logo" href="#/" aria-label="OIC Insurer Index">
+      <svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="8" fill="var(--brand)"/><rect x="9" y="22" width="5" height="9" rx="1" fill="var(--brand-ink)"/><rect x="17.5" y="16" width="5" height="15" rx="1" fill="var(--brand-ink)"/><rect x="26" y="10" width="5" height="21" rx="1" fill="var(--gold)"/></svg>
+      <span class="logo-text"><b data-t="brand"></b><small data-t="brand_sub"></small></span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="#/" data-route=""><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span data-t="nav_rank"></span></a>
+      <a href="#/products" data-route="products"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/></svg><span data-t="nav_products"></span></a>
+      <a href="#/review" data-route="review"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span data-t="nav_review"></span></a>
+      <a href="#/wallet" data-route="wallet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/></svg><span><span data-t="nav_wallet"></span> <span class="pill gold" id="nav-balance">0</span></span></a>
+      <a href="#/portal" data-route="portal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/></svg><span data-t="nav_portal"></span></a>
+      <a href="#/oic" data-route="oic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg><span data-t="nav_oic"></span></a>
+      <a href="#/method" data-route="method"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 4H7l6 8-6 8h10"/></svg><span data-t="nav_method"></span></a>
     </nav>
-    <button class="lang" id="lang" type="button" aria-label="Switch language">EN</button>
   </div>
-  <div class="disclaimer" data-t="disclaimer"></div>
 </header>
+<div class="disclaimer" data-t="disclaimer"></div>
+<div id="band"></div>
 <main id="app" class="wrap"><p class="loading">Loading…</p></main>
+<footer class="site-foot" id="foot"></footer>
 <div id="tip" class="tip" role="tooltip" hidden></div>
 <script src="lib/anim.js"></script>
 <script type="module" src="app.js"></script>

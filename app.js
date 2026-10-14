@@ -154,6 +154,37 @@ const scoreRange = (rows) => {
   return [Math.floor(Math.min(...vals) / 5) * 5 - 2, Math.ceil(Math.max(...vals) / 5) * 5 + 2];
 };
 
+// ---------------------------------------------------------------- page chrome: title band, footer, preferences
+const ICON = {
+  products: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/></svg>',
+  review: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+  oic: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>',
+};
+/** Navy title band above the page content. crumbs = [[label, href?], ...] after "Home". */
+function setBand({ title, sub = '', crumbs = [], kick = '' }) {
+  const cr = crumbs.length ? `<nav class="crumbs" aria-label="Breadcrumb"><a href="#/">${t('crumb_home')}</a>${crumbs.map(([l, h]) => ` <span aria-hidden="true">›</span> ${h ? `<a href="${h}">${esc(l)}</a>` : `<span>${esc(l)}</span>`}`).join('')}</nav>` : '';
+  document.getElementById('band').innerHTML = `<section class="pageband"><div class="pageband-in">${cr}${kick ? `<span class="kick">${kick}</span>` : ''}<h1>${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ''}</div></section>`;
+}
+function renderFooter() {
+  const links = [['#/', 'nav_rank'], ['#/products', 'nav_products'], ['#/review', 'nav_review'], ['#/wallet', 'nav_wallet'], ['#/portal', 'nav_portal'], ['#/oic', 'nav_oic'], ['#/method', 'nav_method']];
+  document.getElementById('foot').innerHTML = `<div class="foot-in">
+    <div class="foot-brand"><b>${t('brand')}</b><span>${t('foot_about')}</span></div>
+    <div><h4>${t('foot_menu')}</h4><ul>${links.map(([h, k]) => `<li><a href="${h}">${t(k)}</a></li>`).join('')}</ul></div>
+    <div><h4>${t('foot_data')}</h4><p>${t('foot_data_text')}</p></div></div>
+    <div class="foot-bottom"><span>${t('foot_copy')}</span><span>${t('foot_version', { d: fmtDate(seed.meta.as_of) })}</span></div>`;
+}
+/** Text size (s / m / l) and light / dark choice, remembered in this browser. */
+function applyPrefs() {
+  const root = document.documentElement;
+  const size = readLS('oic-size') || 'm';
+  root.dataset.size = size;
+  document.querySelectorAll('#sizer [data-size]').forEach((b) => b.classList.toggle('on', b.dataset.size === size));
+  const theme = readLS('oic-theme');
+  if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+  const shown = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.querySelectorAll('#themer [data-theme-set]').forEach((b) => b.classList.toggle('on', b.dataset.themeSet === shown));
+}
+
 // ---------------------------------------------------------------- boot
 async function boot() {
   try {
@@ -174,6 +205,9 @@ async function boot() {
     render();
   });
   window.addEventListener('hashchange', () => { window.scrollTo(0, 0); render(); });
+  document.querySelectorAll('#sizer [data-size]').forEach((b) => b.addEventListener('click', () => { writeLS('oic-size', b.dataset.size); applyPrefs(); }));
+  document.querySelectorAll('#themer [data-theme-set]').forEach((b) => b.addEventListener('click', () => { writeLS('oic-theme', b.dataset.themeSet); applyPrefs(); }));
+  applyPrefs();
   setupTooltip();
   render();
 }
@@ -214,6 +248,7 @@ function renderChrome(route) {
   document.getElementById('nav-balance').textContent = fmt(ledgerBalance(), 0);
   document.querySelectorAll('#nav a').forEach((a) => a.classList.toggle('on', a.dataset.route === route));
   document.title = `${t('brand')} · ${t('brand_sub')}`;
+  renderFooter();
 }
 
 function render() {
@@ -234,6 +269,12 @@ function render() {
 }
 
 // ---------------------------------------------------------------- home: insurer rankings
+// Factual notices about the prototype itself (not news about any insurer).
+const NOTICES = [
+  { date: '2026-10-14', th: 'เปิดต้นแบบรุ่นที่ 2: ผลิตภัณฑ์ที่ขึ้นทะเบียน คะแนนแบบ Bayesian ระดับสมาชิก และระบบสำหรับบริษัทประกัน', en: 'Prototype version 2: listed products, Bayesian scores, member tiers and the insurer portal' },
+  { date: '2026-10-13', th: 'แบบสอบถามผู้ใช้รถ 400–500 คน อยู่ระหว่างเก็บข้อมูล ผลจะนำมาใช้เป็นน้ำหนักของคะแนน', en: 'Survey of 400–500 car owners in fieldwork; results will set the score weights' },
+  { date: '2026-10-13', th: 'ข้อมูลทั้งหมดในเว็บไซต์นี้เป็นข้อมูลจำลอง ชื่อบริษัทและผลิตภัณฑ์เป็นชื่อสมมติ', en: 'All data on this site is simulated; insurer and product names are fictional' },
+];
 function bestWorst(row, market) {
   const diffs = ASPECT_CODES.filter((c) => row.means[c] !== null && market[c] !== null).map((c) => [c, row.means[c] - market[c]]);
   diffs.sort((a, b) => b[1] - a[1]);
@@ -271,17 +312,24 @@ function viewHome() {
     </a>`;
   }).join('');
 
+  document.getElementById('band').innerHTML = `<section class="pageband hero"><div class="pageband-in">
+      <div class="hero-left"><span class="kick">${t('hero_kick')}</span><h1>${t('hero_title')}</h1><p class="sub">${t('hero_sub')}</p></div>
+      <div class="hero-stats stats">
+        <div class="stat"><b>${INSURERS.length}</b><span>${t('stat_insurers')}</span></div>
+        <div class="stat"><b>${fmt(productList().length, 0)}</b><span>${t('stat_products')}</span></div>
+        <div class="stat"><b>${fmt(textReviews().length, 0)}</b><span>${t('stat_verified')}</span></div>
+        <div class="stat"><b>${fmt(seed.policies.length, 0)}</b><span>${t('stat_register')}</span></div>
+      </div></div></section>`;
   app.innerHTML = `
-    <section class="section">
-      <h1>${t('home_title')}</h1>
-      <p class="muted">${model === 'bayes' ? t('home_sub_bayes') : t('home_sub')}</p>
-    </section>
-    <div class="card stats">
-      <div class="stat"><b>${INSURERS.length}</b><span>${t('stat_insurers')}</span></div>
-      <div class="stat"><b>${fmt(productList().length, 0)}</b><span>${t('stat_products')}</span></div>
-      <div class="stat"><b>${fmt(textReviews().length, 0)}</b><span>${t('stat_verified')}</span></div>
-      <div class="stat"><b>${fmt(seed.policies.length, 0)}</b><span>${t('stat_register')}</span></div>
+    <div class="quick">
+      <a href="#/products"><span class="qi">${ICON.products}</span><span><b>${t('quick_products')}</b><small>${t('quick_products_d')}</small></span></a>
+      <a href="#/review"><span class="qi">${ICON.review}</span><span><b>${t('quick_review')}</b><small>${t('quick_review_d')}</small></span></a>
+      <a href="#/oic"><span class="qi">${ICON.oic}</span><span><b>${t('quick_oic')}</b><small>${t('quick_oic_d')}</small></span></a>
     </div>
+    <section class="section">
+      <h2>${t('home_title')}</h2>
+      <p class="muted small">${model === 'bayes' ? t('home_sub_bayes') : t('home_sub')}</p>
+    </section>
     <nav class="tabs"><a class="on" href="#/">${t('tab_insurers')}</a><a href="#/products">${t('tab_products')}</a></nav>
     <div class="filters">
       <label>${t('f_class')}<select id="f-cls">${options(POLICY_CLASSES, filters.cls, t('all'))}</select></label>
@@ -293,7 +341,18 @@ function viewHome() {
       ${isFiltered ? `<span class="chip warn">${t('filtered_note')} · n = ${fmt(rs.length, 0)}</span>` : ''}
     </div>
     ${model === 'bayes' ? `<div class="legend small"><span>${bandChip('above')} ${bandChip('near')} ${bandChip('below')}</span><span>${t('legend_ci')}</span></div>` : ''}
-    <div class="rank-list">${list}</div>`;
+    <div class="rank-list">${list}</div>
+    <div class="home-info">
+      <section class="card section">
+        <h2>${t('how_title')}</h2>
+        <ol class="howto">${[1, 2, 3, 4].map((i) => `<li><b>${t(`how_${i}`)}</b><span>${t(`how_${i}_d`)}</span></li>`).join('')}</ol>
+        <a class="small" href="#/method">${t('how_more')} →</a>
+      </section>
+      <section class="card section">
+        <h2>${t('notice_title')}</h2>
+        <ul class="notices">${NOTICES.map((n) => `<li><time>${fmtDate(n.date)}</time><span>${esc(L(n))}</span></li>`).join('')}</ul>
+      </section>
+    </div>`;
   for (const [id, key] of [['f-cls', 'cls'], ['f-region', 'region'], ['f-channel', 'channel'], ['f-source', 'source']]) {
     document.getElementById(id).addEventListener('change', (e) => { filters[key] = e.target.value; viewHome(); });
   }
@@ -303,6 +362,7 @@ function viewHome() {
 
 // ---------------------------------------------------------------- products ranking
 function viewProducts() {
+  setBand({ title: t('products_title'), sub: t('products_sub'), crumbs: [[t('nav_products')]] });
   const res = scores('product', allReviews());
   let rows = res.rows.filter((r) => (!prodFilters.cls || r.unit.cls === prodFilters.cls) && (!prodFilters.insurer || r.unit.insurer === prodFilters.insurer));
   const sorters = {
@@ -313,7 +373,6 @@ function viewProducts() {
   rows = [...rows].sort(sorters[prodFilters.sort]);
   const range = scoreRange(res.rows);
   app.innerHTML = `
-    <section class="section"><h1>${t('products_title')}</h1><p class="muted">${t('products_sub')}</p></section>
     <nav class="tabs"><a href="#/">${t('tab_insurers')}</a><a class="on" href="#/products">${t('tab_products')}</a></nav>
     <div class="filters">
       <label>${t('f_class')}<select id="p-cls">${options(POLICY_CLASSES, prodFilters.cls, t('all'))}</select></label>
@@ -396,12 +455,11 @@ function viewInsurer(id) {
   const pres = scores('product', all);
   const prods = productList().filter((p) => p.insurer === id);
   const ranked = res.rows.filter((r) => r.post !== null).length;
+  setBand({ title: esc(L(ins)), sub: t('insurer_band_sub'), crumbs: [[t('nav_rank'), '#/'], [L(ins)]] });
 
   app.innerHTML = `
-    <a href="#/" class="small">← ${t('nav_rank')}</a>
     <div class="ins-head">
       <div class="section" style="gap:6px">
-        <h1>${esc(L(ins))}</h1>
         <p class="muted">${esc(lang === 'th' ? ins.en : ins.th)} · <span class="chip warn">${t('fictional')}</span></p>
         <div class="row small muted">
           <span>${fmt(nApp, 0)} ${t('src_app')}</span><span>·</span>
@@ -534,11 +592,10 @@ function viewProduct(id) {
   const ranked = res.rows.filter((r) => r.post !== null).length;
   const yes = (b) => (b ? `<span class="chip good">✓ ${t('yes')}</span>` : `<span class="chip">✗ ${t('no')}</span>`);
   const chans = (p.claim_channel || []).map((c) => t(`claim_ch_${c}`)).join(' · ');
+  setBand({ title: esc(p.name), sub: `${esc(L(INS[p.insurer]))} · ${esc(L(CLS[p.cls]))}`, crumbs: [[t('nav_products'), '#/products'], [L(INS[p.insurer]), `#/insurer/${p.insurer}`], [p.name]] });
   app.innerHTML = `
-    <a href="#/insurer/${p.insurer}" class="small">← ${esc(L(INS[p.insurer]))}</a>
     <div class="ins-head">
       <div class="section" style="gap:6px">
-        <h1>${esc(p.name)}</h1>
         <p class="muted">${esc(lineName(p))} · ${esc(L(CLS[p.cls]))}</p>
         ${miss.length ? `<p class="err small">${t('listing_missing', { f: miss.map((f) => t(`req_${f}`)).join(', ') })}</p>` : `<span class="chip good" style="width:fit-content">✓ ${t('listing_complete')}</span>`}
       </div>
@@ -577,6 +634,7 @@ function newFlow() {
 }
 
 function viewReview() {
+  setBand({ title: t('review_title'), sub: t('review_sub'), crumbs: [[t('nav_review')]] });
   const steps = [t('step_verify'), t('step_rate'), t('step_done')].map((s, i) => `<span class="${i + 1 === flow.step ? 'on' : i + 1 < flow.step ? 'done' : ''}">${i + 1}. ${s}</span>`).join('');
   app.innerHTML = `<div class="steps">${steps}</div><div id="flow"></div>`;
   if (flow.step === 1) stepVerify();
@@ -790,8 +848,8 @@ function viewWallet(message = '') {
   const { tier, next, toNext } = tierFor(credits, { memberDays: memberDays() });
   const prog = next ? ((credits - tier.min) / (next.min - tier.min)) * 100 : 100;
   const hist = [...local.ledger].reverse();
+  setBand({ title: t('wallet_title'), sub: t('wallet_sub'), crumbs: [[t('nav_wallet')]] });
   app.innerHTML = `
-    <h1>${t('wallet_title')}</h1>
     <div class="grid2">
       <div class="tiercard t-${tier.id}">
         <span class="tt">${t('tier_label')}</span>
@@ -885,11 +943,10 @@ function viewPortal(id) {
   const open = critical.filter((r) => !replyOf(r)).sort((a, b) => b.date.localeCompare(a.date));
   const replied = critical.length - open.length;
   const appeals = local.appeals.filter((a) => a.insurer === id);
+  setBand({ title: t('portal_title'), sub: t('portal_sub'), crumbs: [[t('nav_portal')]] });
   const tab = (k, label) => `<button type="button" data-tab="${k}" class="${portalTab === k ? 'on' : ''}">${label}</button>`;
   app.innerHTML = `
     <section class="section">
-      <h1>${t('portal_title')}</h1>
-      <p class="muted">${t('portal_sub')}</p>
       <div class="filters"><label>${t('portal_as')}<select id="as">${options(INSURERS, id, null)}</select></label><span class="chip warn">${t('portal_sim')}</span></div>
     </section>
     <div class="card stats">
@@ -1097,6 +1154,7 @@ function bandChart(res) {
 }
 
 function viewOic() {
+  setBand({ title: t('oic_title'), sub: t('oic_sub'), crumbs: [[t('nav_oic')]] });
   const asOf = seed.meta.as_of;
   const all = allReviews();
   const res = scores('insurer', all, { useModel: 'bayes' });
@@ -1130,7 +1188,6 @@ function viewOic() {
   const pendingAppeals = local.appeals.filter((a) => a.status === 'pending');
 
   app.innerHTML = `
-    <section class="section"><h1>${t('oic_title')}</h1><p class="muted">${t('oic_sub')}</p></section>
     <div class="card stats" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
       <div class="stat"><b>${fmt(res.mu)}</b><span>${t('k_market')}</span></div>
       <div class="stat"><b><span style="color:var(--ok)">${counts.above}</span> · ${counts.near} · <span style="color:var(--div-neg)">${counts.below}</span></b><span>${t('k_bands')}</span></div>
@@ -1227,12 +1284,12 @@ function viewOic() {
 // ---------------------------------------------------------------- method
 let animLoop = null;
 function viewMethod() {
+  setBand({ title: t('method_title'), sub: t('method_sub'), crumbs: [[t('nav_method')]] });
   const imp = Object.fromEntries(ASPECT_CODES.map((c) => [c, meanOf(seed.surveyResponses, (r) => r.imp[c])]));
   const res = scores('insurer', allReviews(), { useModel: 'bayes' });
   const th = lang === 'th';
   const anims = [['scoring', 'anim_scoring'], ['credibility', 'anim_credibility'], ['bayes', 'anim_bayes']];
   app.innerHTML = `
-    <section class="section"><h1>${t('method_title')}</h1><p class="muted">${t('method_sub')}</p></section>
     ${window.ANIMS ? `<section class="section"><h2>${t('anim_title')}</h2>
       <div class="animtabs">${anims.map(([k, label], i) => `<button type="button" class="${i === 0 ? 'on' : ''}" data-anim="${k}">${t(label)}</button>`).join('')}<button type="button" id="anim-replay">↻ ${t('replay')}</button></div>
       <div class="animbox"><canvas id="anim" aria-label="${esc(t('anim_title'))}"></canvas></div>
