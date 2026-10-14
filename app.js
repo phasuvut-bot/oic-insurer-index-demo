@@ -6,6 +6,7 @@ import {
 import { importanceWeights, aspectMeans, weightedSatisfaction, npsBreakdown, trustScores, scoreReviews, meanOf, MIN_REVIEWS_PRIOR } from './lib/scoring.js';
 import { bayesScores, scoreToStars, CASE_MIX_LABELS, HALF_LIFE_DAYS } from './lib/bayes.js';
 import { verifyPolicy } from './lib/verify.js';
+import { track, trackView } from './lib/track.js';
 import {
   reviewPoints, balance, charCount, COMMENT_MIN_CHARS, POINT_RULES, CREDIT_RULES, TIERS,
   reviewCredits, creditsInWindow, tierFor, withMultiplier,
@@ -207,9 +208,10 @@ async function boot() {
   document.getElementById('lang').addEventListener('click', () => {
     lang = lang === 'th' ? 'en' : 'th';
     writeLS('oic-lang', lang);
+    track(`lang-${lang}`);
     render();
   });
-  window.addEventListener('hashchange', () => { window.scrollTo(0, 0); render(); });
+  window.addEventListener('hashchange', () => { window.scrollTo(0, 0); render(); trackView(); });
   document.querySelectorAll('#sizer [data-size]').forEach((b) => b.addEventListener('click', () => { writeLS('oic-size', b.dataset.size); applyPrefs(); }));
   document.querySelectorAll('#themer [data-theme-set]').forEach((b) => b.addEventListener('click', () => { writeLS('oic-theme', b.dataset.themeSet); applyPrefs(); }));
   applyPrefs();
@@ -502,6 +504,7 @@ function renderAspectCard({ means, market, marketLabel, unitLabel, empty = false
   box.innerHTML = `<div class="row between"><h2>${t('aspects_title')}</h2>${empty ? '' : seg}</div>${body}${empty ? '' : aspectTable(means, market, unitLabel, marketLabel)}`;
   box.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
     aspectView = b.dataset.view; writeLS('oic-aspect-view', aspectView);
+    track(`view-${aspectView}`);
     renderAspectCard({ means, market, marketLabel, unitLabel, empty });
   }));
 }
@@ -767,6 +770,7 @@ function stepVerify() {
     const res = await verifyPolicy(f, policies, reviewedSet(), todayBkk());
     if (!res.ok) { flow.error = res.reason; stepVerify(); return; }
     flow.error = null;
+    track('policy-verified');
     flow.policy = res.policy;
     flow.step = 2;
     viewReview();
@@ -863,6 +867,7 @@ function memberDays() {
 function submitReview() {
   const ratingsDone = ASPECT_CODES.every((c) => flow.sat[c] !== undefined) && flow.nps !== null && flow.claimed !== null;
   if (!ratingsDone) { flow.missing = true; stepRate(); return; }
+  track('review-submitted');
   const p = flow.policy;
   const date = todayBkk();
   const text = flow.comment.trim();
