@@ -1,0 +1,118 @@
+{
+ "source": "Aggregates of the OIC Trust Score V2 Google Form (scripts/survey-aggregate.mjs). No individual answers.",
+ "generated_at": "2026-10-14T19:53:51+07:00",
+ "date_range": [
+  "2026-09-07",
+  "2026-10-14"
+ ],
+ "responses_total": 673,
+ "responses_used": 423,
+ "excluded": {
+  "no_car": 207,
+  "incomplete_or_out_of_range": 21,
+  "no_voluntary_insurance": 22
+ },
+ "importance_mean": {
+  "A1": 4.553,
+  "A2": 4.355,
+  "B1": 4.388,
+  "B2": 4.217,
+  "C1": 4.456,
+  "C2": 4.3,
+  "D1": 4.563,
+  "D2": 4.482
+ },
+ "weights": {
+  "A1": 0.1289,
+  "A2": 0.1233,
+  "B1": 0.1242,
+  "B2": 0.1194,
+  "C1": 0.1262,
+  "C2": 0.1218,
+  "D1": 0.1292,
+  "D2": 0.1269
+ },
+ "satisfaction_mean": {
+  "A1": 4.381,
+  "A2": 4.262,
+  "B1": 4.298,
+  "B2": 4.137,
+  "C1": 4.397,
+  "C2": 4.267,
+  "D1": 4.404,
+  "D2": 4.336
+ },
+ "nps": {
+  "nps": 30,
+  "promoters": 46.6,
+  "passives": 36.9,
+  "detractors": 16.5
+ },
+ "claimed_share": 0.501,
+ "mix": {
+  "cls": {
+   "2": 0.002,
+   "3": 0.033,
+   "1-garage": 0.409,
+   "1-dealer": 0.374,
+   "2plus": 0.149,
+   "3plus": 0.033
+  },
+  "channel": {
+   "broker": 0.293,
+   "dealer": 0.135,
+   "bank": 0.132,
+   "agent": 0.128,
+   "other": 0.113,
+   "telesales": 0.106,
+   "online": 0.092
+  },
+  "region": {
+   "bkk": 0.626,
+   "northeast": 0.128,
+   "central": 0.085,
+   "north": 0.061,
+   "east": 0.04,
+   "south": 0.038,
+   "west": 0.021
+  },
+  "ageGroup": {
+   "31 - 40 ปี": 0.402,
+   "41 - 50 ปี": 0.284,
+   "21 - 30 ปี": 0.206,
+   "51 - 60 ปี": 0.09,
+   "มากกว่า 60 ปี": 0.014,
+   "น้อยกว่าหรือเท่ากับ 20 ปี": 0.005
+  }
+ },
+ "insurers_named": 12,
+ "responses_per_insurer_sorted": [
+  90,
+  58,
+  56,
+  41,
+  38,
+  30,
+  21,
+  19,
+  18,
+  7,
+  3,
+  1
+ ],
+ "model": {
+  "sigma": 17.54,
+  "tau": 4.15,
+  "k": 17.87,
+  "mu": 76.93,
+  "beta": {
+   "claimed": 3.19,
+   "cls_1-dealer": 1.88,
+   "cls_2plus": 2.98,
+   "cls_3plus": 5.51,
+   "cls_2": 0,
+   "cls_3": 7.59
+  },
+  "n_insurer_level": 382
+ }
+}

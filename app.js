@@ -1,7 +1,7 @@
 // OIC Insurer Index prototype: single-page app (hash routes), no build step, no dependencies.
 import { STRINGS } from './i18n.js';
 import {
-  ASPECTS, ASPECT_CODES, GROUPS, INSURERS, POLICY_CLASSES, CHANNELS, REGIONS, CLAIM_TYPES, PROVINCES, PRODUCT_LINES, PRODUCT_REQUIRED,
+  ASPECTS, ASPECT_CODES, SHORT_ASPECT, GROUPS, INSURERS, POLICY_CLASSES, CHANNELS, REGIONS, CLAIM_TYPES, PROVINCES, PRODUCT_LINES, PRODUCT_REQUIRED,
 } from './lib/catalog.js';
 import { importanceWeights, aspectMeans, weightedSatisfaction, npsBreakdown, trustScores, scoreReviews, meanOf, MIN_REVIEWS_PRIOR } from './lib/scoring.js';
 import { bayesScores, scoreToStars, CASE_MIX_LABELS, HALF_LIFE_DAYS } from './lib/bayes.js';
@@ -16,6 +16,7 @@ const LS_KEY = 'oic-index-demo-v2';
 const app = document.getElementById('app');
 let seed, simSeed, policies, weights;
 let realSurvey = null; // public/data/survey-real.json, written by scripts/import-survey.mjs (local only)
+let surveyAgg = null; // public/data/survey-aggregate.json: aggregates of the real survey, safe to publish
 let mode = readLS('oic-mode') === 'survey' ? 'survey' : 'sim';
 let model = readLS('oic-model') === 'buhl' ? 'buhl' : 'bayes';
 let lang = readLS('oic-lang') || 'th';
@@ -197,6 +198,10 @@ async function boot() {
     const res = await fetch('data/survey-real.json');
     if (res.ok) realSurvey = await res.json();
   } catch { /* no imported survey yet */ }
+  try {
+    const res = await fetch('data/survey-aggregate.json');
+    if (res.ok) surveyAgg = await res.json();
+  } catch { /* no imported survey yet */ }
   policies = new Map(simSeed.policies.map((p) => [p.policy_no, p]));
   applyMode();
   document.getElementById('lang').addEventListener('click', () => {
@@ -217,7 +222,7 @@ async function boot() {
 function applyMode() {
   if (mode === 'survey' && !realSurvey) mode = 'sim';
   seed = mode === 'survey' ? { ...simSeed, surveyResponses: realSurvey.responses, appReviews: [] } : simSeed;
-  weights = importanceWeights(seed.surveyResponses);
+  weights = mode === 'sim' && surveyAgg ? { ...surveyAgg.weights } : importanceWeights(seed.surveyResponses);
   memo.clear();
 }
 
@@ -272,7 +277,7 @@ function render() {
 // Factual notices about the prototype itself (not news about any insurer).
 const NOTICES = [
   { date: '2026-10-14', th: 'เปิดต้นแบบรุ่นที่ 2: ผลิตภัณฑ์ที่ขึ้นทะเบียน คะแนนแบบ Bayesian ระดับสมาชิก และระบบสำหรับบริษัทประกัน', en: 'Prototype version 2: listed products, Bayesian scores, member tiers and the insurer portal' },
-  { date: '2026-10-13', th: 'แบบสอบถามผู้ใช้รถ 400–500 คน อยู่ระหว่างเก็บข้อมูล ผลจะนำมาใช้เป็นน้ำหนักของคะแนน', en: 'Survey of 400–500 car owners in fieldwork; results will set the score weights' },
+  { date: '2026-10-14', th: 'แบบสอบถามผู้ใช้รถเสร็จสิ้น: ตอบ 673 คน ใช้วิเคราะห์ได้ 423 คน น้ำหนักคะแนนและระดับของข้อมูลจำลองมาจากแบบสอบถามนี้', en: 'Car-owner survey complete: 673 responses, 423 usable; score weights and simulated data levels come from it' },
   { date: '2026-10-13', th: 'ข้อมูลทั้งหมดในเว็บไซต์นี้เป็นข้อมูลจำลอง ชื่อบริษัทและผลิตภัณฑ์เป็นชื่อสมมติ', en: 'All data on this site is simulated; insurer and product names are fictional' },
 ];
 function bestWorst(row, market) {
@@ -421,6 +426,86 @@ function aspectBars(means, market, marketLabel = t('market_avg')) {
   }).join('');
 }
 
+// ---------------------------------------------------------------- 8-aspect card: radar (default) or bars
+let aspectView = readLS('oic-aspect-view') === 'bars' ? 'bars' : 'radar';
+const RADAR_MIN = 2; const RADAR_MAX = 5; // ratings are 1-5; scores cluster high, so the centre is 2
+const GROUP_VAR = { A: '--grp-a', B: '--grp-b', C: '--grp-c', D: '--grp-d' };
+
+/** Radar chart as SVG. Axes clockwise from the top in catalog order; scale RADAR_MIN..RADAR_MAX. */
+function radarSvg(means, market, marketLabel) {
+  const W = 480; const H = 410; const cx = 240; const cy = 205; const R = 132; const LR = 150;
+  const n = ASPECTS.length;
+  const ang = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+  const rad = (v) => (R * (Math.min(RADAR_MAX, Math.max(RADAR_MIN, v)) - RADAR_MIN)) / (RADAR_MAX - RADAR_MIN);
+  const pt = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
+  const poly = (vals) => ASPECTS.map((a, i) => pt(i, rad(vals[a.code] ?? RADAR_MIN)).map((v) => v.toFixed(1)).join(',')).join(' ');
+  let g = `<svg class="chart radar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t('radar_aria'))}">`;
+  // group sectors (each group spans its two axes)
+  for (let k = 0; k < n; k += 2) {
+    const a0 = ang(k) - Math.PI / n; const a1 = ang(k + 1) + Math.PI / n; const rr = R + 6;
+    g += `<path d="M${cx},${cy}L${(cx + rr * Math.cos(a0)).toFixed(1)},${(cy + rr * Math.sin(a0)).toFixed(1)}A${rr},${rr} 0 0 1 ${(cx + rr * Math.cos(a1)).toFixed(1)},${(cy + rr * Math.sin(a1)).toFixed(1)}Z" fill="var(${GROUP_VAR[ASPECTS[k].group]})" fill-opacity=".09"/>`;
+  }
+  // rings and spokes
+  for (let v = RADAR_MIN; v <= RADAR_MAX; v += 1) {
+    g += `<polygon class="ring" points="${ASPECTS.map((_, i) => pt(i, rad(v)).map((x) => x.toFixed(1)).join(',')).join(' ')}" fill="none"/>`;
+    if (v > RADAR_MIN) g += `<text class="ring-lbl" x="${cx + 4}" y="${(cy - rad(v) + 11).toFixed(1)}">${v}</text>`;
+  }
+  ASPECTS.forEach((a, i) => {
+    const [x, y] = pt(i, R);
+    g += `<line class="spoke" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="var(${GROUP_VAR[a.group]})"/>`;
+  });
+  // comparison (dashed, no fill) then this unit (solid, light fill)
+  g += `<polygon class="radar-avg" points="${poly(market)}"/>`;
+  g += `<polygon class="radar-unit" points="${poly(means)}"/>`;
+  // labels: code + short name, anchored away from the centre
+  ASPECTS.forEach((a, i) => {
+    const [x, y] = pt(i, LR); const c = Math.cos(ang(i)); const sn = Math.sin(ang(i));
+    const anchor = c > 0.3 ? 'start' : c < -0.3 ? 'end' : 'middle';
+    const dy = sn < -0.9 ? -14 : sn > 0.9 ? 6 : -4;
+    g += `<text class="radar-lbl" x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}"><tspan class="code">${a.code}</tspan><tspan x="${x.toFixed(1)}" dy="1.15em">${esc(L(SHORT_ASPECT[a.code]))}</tspan></text>`;
+  });
+  // vertices with large touch targets
+  ASPECTS.forEach((a, i) => {
+    const v = means[a.code];
+    if (v === null || v === undefined) return;
+    const [x, y] = pt(i, rad(v));
+    const tip = `${a.code} ${L(a)} · ${fmt(v, 2)} / 5 · ${marketLabel} ${fmt(market[a.code], 2)} · ${t('weight')} ${fmt(weights[a.code] * 100, 1)}%`;
+    g += `<g data-tip="${esc(tip)}" tabindex="0" role="img" aria-label="${esc(tip)}"><circle class="hit" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="14"/><circle class="radar-pt" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5"/></g>`;
+  });
+  return `${g}</svg>`;
+}
+
+/** Compact list under the radar: groups A-D, each aspect with score, comparison and weight. */
+function radarList(means, market, marketLabel) {
+  return `<div class="radar-list">${Object.keys(GROUPS).map((grp) => `<div class="rl-group">
+    <div class="rl-head"><span class="rl-gname"><i style="background:var(${GROUP_VAR[grp]})"></i>${grp} · ${esc(L(GROUPS[grp]))}</span><span>${t('rl_score')}</span><span>${t('rl_avg')}</span><span>${t('weight')}</span></div>
+    ${ASPECTS.filter((a) => a.group === grp).map((a) => `<div class="rl-row" data-tip="${esc(`${a.code} ${L(a)}`)}"><span class="rl-name"><b>${a.code}</b> ${esc(L(SHORT_ASPECT[a.code]))}</span>
+      <span class="num"><b>${fmt(means[a.code], 2)}</b></span><span class="num muted">${fmt(market[a.code], 2)}</span><span class="num muted">${fmt(weights[a.code] * 100, 0)}%</span></div>`).join('')}
+  </div>`).join('')}</div>`;
+}
+
+/** Hidden table: the same numbers for screen readers. */
+function aspectTable(means, market, unitLabel, marketLabel) {
+  return `<table class="sr-only"><caption>${esc(t('aspects_title'))}: ${esc(unitLabel)}</caption><thead><tr><th>${t('aspect')}</th><th>${esc(unitLabel)}</th><th>${esc(marketLabel)}</th><th>${t('weight')}</th></tr></thead>
+    <tbody>${ASPECTS.map((a) => `<tr><td>${a.code} ${esc(L(a))}</td><td>${fmt(means[a.code], 2)}</td><td>${fmt(market[a.code], 2)}</td><td>${fmt(weights[a.code] * 100, 1)}%</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderAspectCard({ means, market, marketLabel, unitLabel, empty = false }) {
+  const box = document.getElementById('aspect-card');
+  if (!box) return;
+  const seg = `<div class="seg view-seg" role="group" aria-label="${esc(t('view_label'))}">${['radar', 'bars'].map((v) => `<button type="button" data-view="${v}" class="${aspectView === v ? 'on' : ''}" aria-pressed="${aspectView === v}">${t(`view_${v}`)}</button>`).join('')}</div>`;
+  const legend = `<div class="legend"><span><i></i>${esc(unitLabel)}</span><span><i class="${aspectView === 'radar' ? 'dash' : 'tick'}"></i>${esc(marketLabel)}</span></div>`;
+  const body = empty ? `<p class="muted">${t('no_reviews_yet')}</p>`
+    : aspectView === 'radar'
+      ? `<p class="muted small">${t('radar_note', { min: RADAR_MIN })}</p><div class="radar-wrap">${radarSvg(means, market, marketLabel)}</div>${legend}${radarList(means, market, marketLabel)}`
+      : `<p class="muted small">${t('bars_note')}</p><div class="hist">${aspectBars(means, market, marketLabel)}</div>${legend}`;
+  box.innerHTML = `<div class="row between"><h2>${t('aspects_title')}</h2>${empty ? '' : seg}</div>${body}${empty ? '' : aspectTable(means, market, unitLabel, marketLabel)}`;
+  box.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
+    aspectView = b.dataset.view; writeLS('oic-aspect-view', aspectView);
+    renderAspectCard({ means, market, marketLabel, unitLabel, empty });
+  }));
+}
+
 function npsStack(b) {
   return `<div class="stack" role="img" aria-label="NPS ${fmt(b.nps, 0)}">
       <span class="det" style="width:${b.detractors}%" data-tip="${esc(t('detractors'))}: ${fmt(b.detractors, 0)}%"></span>
@@ -476,12 +561,7 @@ function viewInsurer(id) {
       <tbody>${prods.map((p) => { const pr = pres.byId[p.id]; return `<tr><td><a href="#/product/${p.id}">${esc(p.name)}</a>${missingFields(p).length ? ` <span class="chip bad">${t('listing_incomplete')}</span>` : ''}</td><td>${esc(L(CLS[p.cls]))}</td><td class="r num">${thb(p.premium_thb)}</td><td class="r num">${fmt(pr?.count ?? 0, 0)}</td><td class="r num"><b>${fmt(pr?.post)}</b></td><td>${bandChip(pr?.band)}</td></tr>`; }).join('')}</tbody></table></div>
     </section>
     <div class="grid2">
-      <div class="card section">
-        <h2>${t('aspects_title')}</h2>
-        <p class="muted small">${t('aspects_note')}</p>
-        <div class="hist">${aspectBars(row.means, market)}</div>
-        <div class="legend"><span><i></i>${esc(L(ins))}</span><span><i class="tick"></i>${t('market_avg')}</span></div>
-      </div>
+      <section class="card section aspect-card" id="aspect-card"></section>
       <div class="section">
         <div class="card section">
           <div class="row between"><h2>${t('nps_title')}</h2><span class="score-big num">${signed(row.nps.nps, 0)}</span></div>
@@ -495,6 +575,7 @@ function viewInsurer(id) {
       </div>
     </div>
     ${reviewSection()}`;
+  renderAspectCard({ means: row.means, market, marketLabel: t('market_avg'), unitLabel: L(ins) });
   bindReviewSection((r) => r.insurer === id);
 }
 
@@ -616,13 +697,10 @@ function viewProduct(id) {
         </div>
         <p class="muted small">${t('listing_rule')}</p>
       </section>
-      <section class="card section">
-        <h2>${t('aspects_title')}</h2>
-        <p class="muted small">${t('aspects_note_class', { c: L(CLS[p.cls]) })}</p>
-        ${row.count ? `<div class="hist">${aspectBars(row.means, classMarket, t('class_avg'))}</div>` : `<p class="muted">${t('no_reviews_yet')}</p>`}
-      </section>
+      <section class="card section aspect-card" id="aspect-card"></section>
     </div>
     ${reviewSection()}`;
+  renderAspectCard({ means: row.means, market: classMarket, marketLabel: t('class_avg_of', { c: L(CLS[p.cls]) }), unitLabel: p.name, empty: !row.count });
   bindReviewSection((r) => r.product === id);
 }
 
@@ -1285,7 +1363,7 @@ function viewOic() {
 let animLoop = null;
 function viewMethod() {
   setBand({ title: t('method_title'), sub: t('method_sub'), crumbs: [[t('nav_method')]] });
-  const imp = Object.fromEntries(ASPECT_CODES.map((c) => [c, meanOf(seed.surveyResponses, (r) => r.imp[c])]));
+  const imp = mode === 'sim' && surveyAgg ? surveyAgg.importance_mean : Object.fromEntries(ASPECT_CODES.map((c) => [c, meanOf(seed.surveyResponses, (r) => r.imp[c])]));
   const res = scores('insurer', allReviews(), { useModel: 'bayes' });
   const th = lang === 'th';
   const anims = [['scoring', 'anim_scoring'], ['credibility', 'anim_credibility'], ['bayes', 'anim_bayes']];
@@ -1303,7 +1381,8 @@ function viewMethod() {
       <p class="small muted">${t('m_prod')}</p>
     </div>
     <section class="card section">
-      <h2>${t('weights_title', { n: fmt(seed.surveyResponses.length, 0) })}</h2>
+      <h2>${t('weights_title', { n: fmt(mode === 'sim' && surveyAgg ? surveyAgg.responses_used : seed.surveyResponses.length, 0) })}</h2>
+      ${mode === 'sim' && surveyAgg ? `<p class="okmsg small">${t('survey_source', { total: fmt(surveyAgg.responses_total, 0), used: fmt(surveyAgg.responses_used, 0), d1: fmtDate(surveyAgg.date_range[0]), d2: fmtDate(surveyAgg.date_range[1]) })}</p>` : ''}
       <div class="tablebox"><table><thead><tr><th>${t('group')}</th><th>${t('aspect')}</th><th class="r">${t('mean_imp')}</th><th class="r">${t('weight')}</th></tr></thead>
       <tbody>${ASPECTS.map((a) => `<tr><td>${a.group} · ${esc(L(GROUPS[a.group]))}</td><td>${a.code} ${esc(L(a))}</td><td class="r num">${fmt(imp[a.code], 2)}</td><td class="r num">${fmt(weights[a.code] * 100, 1)}%</td></tr>`).join('')}</tbody></table></div>
     </section>
@@ -1356,6 +1435,16 @@ function setupTooltip() {
     if (el) show(el, e.clientX, e.clientY); else tip.hidden = true;
   });
   document.addEventListener('pointerleave', () => { tip.hidden = true; });
+  // phones: tap a point to show its tooltip, tap elsewhere to hide
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest?.('[data-tip]');
+    if (el && e.pointerType !== 'mouse') show(el, e.clientX, e.clientY); else if (!el) tip.hidden = true;
+  });
+  document.addEventListener('focusin', (e) => {
+    const el = e.target.closest?.('[data-tip]');
+    if (el) { const r = el.getBoundingClientRect(); show(el, r.left + r.width / 2, r.top); }
+  });
+  document.addEventListener('focusout', () => { tip.hidden = true; });
 }
 
 boot();

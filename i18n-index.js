@@ -269,4 +269,16 @@ export const MORE_STRINGS = {
   how_4_d: { th: 'ปรับตามจำนวนรีวิว พร้อมช่วงความเชื่อมั่น', en: 'Adjusted for sample size, with intervals' },
   how_more: { th: 'อ่านวิธีคำนวณ', en: 'Read the method' },
   notice_title: { th: 'ประกาศ', en: 'Notices' },
+
+  // 8-aspect radar
+  view_label: { th: 'รูปแบบการแสดงผล', en: 'View' },
+  view_radar: { th: 'เรดาร์', en: 'Radar' },
+  view_bars: { th: 'แท่ง', en: 'Bars' },
+  radar_aria: { th: 'แผนภูมิเรดาร์ความพึงพอใจ 8 ด้าน', en: 'Radar chart of satisfaction on 8 aspects' },
+  radar_note: { th: 'เส้นทึบ = รายการนี้ · เส้นประ = ค่าเฉลี่ยเปรียบเทียบ · ยิ่งพื้นที่กว้างยิ่งพอใจมาก · แกนเริ่มที่ {min} (คะแนน 1–5) · แตะจุดเพื่อดูตัวเลข', en: 'Solid = this one · dashed = comparison average · a wider shape means more satisfied · axes start at {min} (scores 1–5) · tap a point for numbers' },
+  bars_note: { th: 'แท่ง = รายการนี้ (เต็ม 5) · เส้นตั้ง = ค่าเฉลี่ยเปรียบเทียบ · % = น้ำหนักความสำคัญจากแบบสอบถาม', en: 'Bar = this one (out of 5) · tick = comparison average · % = importance weight from the survey' },
+  rl_score: { th: 'คะแนน', en: 'Score' },
+  rl_avg: { th: 'เฉลี่ย', en: 'Avg' },
+  class_avg_of: { th: 'ค่าเฉลี่ย{c}', en: '{c} average' },
+  survey_source: { th: 'น้ำหนักมาจากแบบสอบถามจริง: ตอบ {total} คน ใช้วิเคราะห์ได้ {used} คน ({d1} – {d2}) ใช้เฉพาะค่าสรุป ไม่มีคำตอบรายบุคคลในเว็บไซต์นี้', en: 'Weights come from the real survey: {total} responses, {used} usable ({d1} – {d2}). Only aggregates are used; no individual answers are on this site.' },
 };
