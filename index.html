@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OIC Insurer Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="logo" href="#/"><span class="logo-mark">★</span><span data-t="brand"></span></a>
+    <nav class="nav" id="nav">
+      <a href="#/" data-route="" data-t="nav_rank"></a>
+      <a href="#/products" data-route="products" data-t="nav_products"></a>
+      <a href="#/review" data-route="review" data-t="nav_review"></a>
+      <a href="#/wallet" data-route="wallet"><span data-t="nav_wallet"></span> <span class="pill gold" id="nav-balance">0</span></a>
+      <a href="#/portal" data-route="portal" data-t="nav_portal"></a>
+      <a href="#/oic" data-route="oic" data-t="nav_oic"></a>
+      <a href="#/method" data-route="method" data-t="nav_method"></a>
+    </nav>
+    <button class="lang" id="lang" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <div class="disclaimer" data-t="disclaimer"></div>
+</header>
+<main id="app" class="wrap"><p class="loading">Loading…</p></main>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<script src="lib/anim.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
